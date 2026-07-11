@@ -14,9 +14,9 @@ Developed and verified against a **VITURE Luma Ultra**
 `03_virtual_screen` in action: the desktop is pinned to a fixed spot in
 the room, so it stays put on the wall as the head turns.
 
-[![Virtual screen world-locked to the wall as the head moves](docs/demo-poster.jpg)](docs/demo-social.mp4)
+<video src="https://github.com/brianhasquestions/Viture_AR_Playground/raw/main/docs/demo-social.mp4" controls muted loop poster="docs/demo-poster.jpg" width="100%"></video>
 
-▶ **[Watch the demo](docs/demo-social.mp4)** (click the image above to play).
+▶ If the player above does not load, **[watch the demo here](https://github.com/brianhasquestions/Viture_AR_Playground/raw/main/docs/demo-social.mp4)**.
 
 ## Examples
 
