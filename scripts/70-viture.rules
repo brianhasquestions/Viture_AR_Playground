@@ -1,0 +1,17 @@
+# VITURE XR Glasses udev rules
+# Grants the logged-in user read/write access to VITURE devices and the
+# Luma Pro/Cyber/Ultra USB camera, so the SDK can claim them without root.
+#
+# Install:
+#   sudo cp scripts/70-viture.rules /etc/udev/rules.d/70-viture.rules
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+# Then unplug and replug the glasses.
+
+# VITURE glasses (all models share vendor ID 0x35CA)
+SUBSYSTEM=="usb", ATTR{idVendor}=="35ca", MODE="0660", TAG+="uaccess"
+
+# VITURE camera (Microdia controller used by Luma Pro / Cyber / Ultra)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0c45", ATTR{idProduct}=="636b", MODE="0660", TAG+="uaccess"
+
+# VITURE camera (Beast)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0c45", ATTR{idProduct}=="6368", MODE="0660", TAG+="uaccess"
