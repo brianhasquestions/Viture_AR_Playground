@@ -55,10 +55,12 @@ XR_Playground/
 ## Setup
 
 The **VITURE Glasses SDK is not included in this repository** (it is
-proprietary). Obtain it from VITURE and unpack it under `sdk/` so the
-layout matches `sdk/viture_x86_64/` (or `sdk/viture_arm64/` on aarch64),
-each with its `include/` headers and architecture library directory.
-Nothing builds without it.
+proprietary). Obtain it from **VITURE's developer program** and unpack it
+under `sdk/` so the layout matches `sdk/viture_x86_64/` (or
+`sdk/viture_arm64/` on aarch64), each with its `include/` headers and
+architecture library directory. Nothing builds without it. See
+[`sdk/README.md`](sdk/README.md) for the exact layout and download
+pointer. These samples were verified against **SDK v2.3.2**.
 
 Prerequisites: `gcc`, `make`, and a VITURE device on USB. The vendor
 library needs `libudev.so.1` (present on most distros). `02_ar_overlay`

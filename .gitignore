@@ -30,8 +30,10 @@ frame_*.png
 # Vendor SDK — proprietary VITURE binaries, kept local, never committed.
 # Obtain it from VITURE and unpack under sdk/ to build. lib/ is just
 # convenience symlinks into sdk/, so it is ignored too.
+# sdk/README.md is the one exception: it documents the expected layout.
 # =====================================================================
-sdk/
+sdk/*
+!sdk/README.md
 lib/
 
 # =====================================================================
