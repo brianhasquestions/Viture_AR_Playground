@@ -1,4 +1,4 @@
-# 06_sealed_drawing
+# 04_sealed_drawing
 
 Draw something, type a message, and seal that message to the drawing
 **and to one specific pair of glasses**. Hand the glasses over; whoever
@@ -6,10 +6,10 @@ wears them looks at the drawing through the onboard camera and the
 message appears on the glasses' display. Any other pair of glasses sees
 nothing but a locked record.
 
-This is `05_drawing_vault` with real cryptography. Nothing is hand
-rolled: X25519, HKDF-SHA256 and AES-256-GCM come from libcrypto
-(OpenSSL 3). The hardware identity is the SHA-256 of the board serial,
-which is the only form the VITURE SDK exposes it in.
+The cryptography is real and nothing is hand rolled: X25519,
+HKDF-SHA256 and AES-256-GCM come from libcrypto (OpenSSL 3). The
+hardware identity is the SHA-256 of the board serial, which is the only
+form the VITURE SDK exposes it in.
 
 ## How the keys stack
 
