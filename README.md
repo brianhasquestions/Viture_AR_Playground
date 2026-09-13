@@ -25,6 +25,9 @@ the room, so it stays put on the wall as the head turns.
 | [`01_camera_feed`](examples/01_camera_feed/) | Pull the live 1080p MJPEG camera feed; save stills or stream to a viewer |
 | [`02_ar_overlay`](examples/02_ar_overlay/) | Optical see-through AR: world-locked graphics on the glasses display, anchored by the Carina 6DoF pose |
 | [`03_virtual_screen`](examples/03_virtual_screen/) | Pin your desktop to a spot in the room: live screen capture on a world-locked quad |
+| [`04_glyph_reader`](examples/04_glyph_reader/) | Read a hand-drawn glyph through the camera and reveal a message bound to that specific pair of glasses. Pure C: JPEG decode, marker detection, SHA-256 binding |
+| [`05_drawing_vault`](examples/05_drawing_vault/) | Draw anything, seal a message to that drawing + your glasses, later look at it to reveal the message on the display. Frameless perceptual hashing |
+| [`06_sealed_drawing`](examples/06_sealed_drawing/) | Hold the volume rocker to seal a message to a painted object and one specific pair of glasses, or to decode it: X25519 identity from the hardware serial hash, HKDF, two AES-256-GCM layers (libcrypto), object located and traced on the display. [Example pictures](docs/sealed_drawing_decoded.jpg) |
 
 ## Layout
 
@@ -42,7 +45,10 @@ XR_Playground/
 ├── examples/             # each sample: src/headers, src/source, Makefile, README
 │   ├── 01_camera_feed/
 │   ├── 02_ar_overlay/
-│   └── 03_virtual_screen/
+│   ├── 03_virtual_screen/
+│   ├── 04_glyph_reader/
+│   ├── 05_drawing_vault/
+│   └── 06_sealed_drawing/
 ├── sdk/
 │   ├── viture_arm64/     # unpacked VITURE SDK (Linux arm64)
 │   └── viture_x86_64/    # unpacked VITURE SDK (Linux x86_64)
@@ -65,6 +71,7 @@ pointer. These samples were verified against **SDK v2.3.2**.
 Prerequisites: `gcc`, `make`, and a VITURE device on USB. The vendor
 library needs `libudev.so.1` (present on most distros). `02_ar_overlay`
 and `03_virtual_screen` additionally need **SDL2** and **OpenGL**;
+`06_sealed_drawing` also needs **libcrypto** (OpenSSL 3).
 `03_virtual_screen` also needs **wayland-client** + **wayland-scanner**
 and a **wlroots-based compositor** (Hyprland, Sway, river) for
 screen capture. `ffplay` (from ffmpeg) is optional, for the live camera
