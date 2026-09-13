@@ -55,6 +55,12 @@ CFLAGS   ?= -std=c11 -D_POSIX_C_SOURCE=200809L \
 CFLAGS   += -I$(INC_DIR) -I$(COMMON_INC) -I$(SDK_INC) -I$(OBJ_DIR) \
             $(EXTRA_CFLAGS)
 
+# Header dependencies: each object gets a .d file next to it, so editing
+# a header rebuilds every source that includes it (a changed struct in a
+# header with stale objects is a silent way to segfault).
+CFLAGS   += -MMD -MP
+DEPS     := $(OBJS:.o=.d)
+
 # --disable-new-dtags emits DT_RPATH (not DT_RUNPATH) so the rpath also
 # resolves the SDK's *transitive* deps (libcarina_vio -> OpenCV .so's),
 # which DT_RUNPATH would not do.
@@ -94,3 +100,5 @@ run: all
 clean:
 	@rm -rf $(OBJ_DIR) $(BIN_DIR)
 	@echo "Cleaned $(EXAMPLE)"
+
+-include $(DEPS)

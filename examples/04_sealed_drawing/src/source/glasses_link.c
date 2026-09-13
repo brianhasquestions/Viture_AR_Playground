@@ -43,6 +43,9 @@ struct glasses_link
     int             volume_prev;
     int             direction;
     int             fired_direction;
+    int             press_pending;
+    int             press_direction;
+    long            press_at_ms;
     uint8_t         sn_hash[GLASSES_LINK_ID_BYTES];
 };
 
@@ -69,6 +72,7 @@ static void record_press(glasses_link_t * p_link, long at_ms)
         p_link->run_start_ms = at_ms;
         p_link->run_events   = 0;
     }
+    p_link->press_at_ms = at_ms;
     p_link->run_last_ms = at_ms;
     p_link->run_events++;
     if ((p_link->run_events >= HOLD_MIN_EVENTS) &&
@@ -351,6 +355,31 @@ const uint8_t * glasses_link_sn_hash(const glasses_link_t * p_link)
     }
 
     return p_hash;
+}
+
+int glasses_link_take_press(glasses_link_t * p_link)
+{
+    int  fired = GLASSES_LINK_NONE;
+    long now   = 0;
+
+    if ((NULL == p_link) || (0 == p_link->lock_ready))
+    {
+        goto cleanup;
+    }
+    now = now_ms();
+    (void)pthread_mutex_lock(&p_link->lock);
+    if ((p_link->run_events > 0) && (p_link->run_events < HOLD_MIN_EVENTS) &&
+        ((now - p_link->press_at_ms) > HOLD_GAP_MS) &&
+        (GLASSES_LINK_NONE != p_link->direction))
+    {
+        fired              = p_link->direction;
+        p_link->run_events = 0;
+    }
+    (void)pthread_mutex_unlock(&p_link->lock);
+
+cleanup:
+
+    return fired;
 }
 
 int glasses_link_take_trigger(glasses_link_t * p_link)

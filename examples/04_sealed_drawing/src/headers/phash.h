@@ -74,6 +74,18 @@ int phash_compute(const gray_image_t * p_img, const phash_view_t * p_view,
                   uint8_t * p_hash);
 
 /*
+Summary: Hash an already-located region: the plain view plus the
+         rotated and zoomed variants. The colour field is left zeroed.
+Inputs:  p_img    - grayscale image.
+         p_region - square around the object.
+         p_set    - receives primary, variants and count.
+Outputs: 0 on success, -1 on bad input.
+*/
+int phash_set_hash_region(const gray_image_t * p_img,
+                          const struct region * p_region,
+                          phash_set_t * p_set);
+
+/*
 Summary: Decode a baseline JPEG frame, locate the object, hash the
          plain view plus the rotated and zoomed variants, and take the
          colour signature.

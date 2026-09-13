@@ -1,5 +1,6 @@
 #include "actions.h"
 #include "camera.h"
+#include "vault.h"
 #include "fileio.h"
 #include "hexcodec.h"
 #include "session.h"
@@ -23,6 +24,7 @@
 #define SDK_LOG_ERRORS_ONLY (1)
 #define FIRST_OPTION_ARG    (2)
 #define SEAL_WARMUP_FRAMES  (20)
+#define VAULT_LIST_CAP      (64)
 #define RESULT_HOLD_MS      (5000L)
 #define MS_PER_SEC          (1000L)
 #define NS_PER_MS           (1000000L)
@@ -55,6 +57,8 @@ static void usage(void)
         "sealed_drawing - seal a message to a picture and one pair of "
         "glasses\n\n"
         "  identity                 print this pair's public key\n"
+        "  list                     show the records in the vault\n"
+        "  forget <n>               remove record n from the vault\n"
         "  watch                    live: hold volume UP to decode the "
         "object\n"
         "                           in view, volume DOWN to encode a "
@@ -67,7 +71,12 @@ static void usage(void)
         "  --captures <dir>     where pictures go (default captures/)\n"
         "  --recipient <hex64>  seal for another pair's public key\n"
         "  --pin <text>         extra secret mixed into the identity\n"
-        "  --maxdist <n>        match threshold, 0-54 (default 22)\n"
+        "  --maxdist <n>        hash-score threshold for texture-poor "
+        "objects\n"
+        "                       (default 22)\n"
+        "  --messages <file>    preset messages for the on-glasses "
+        "picker,\n"
+        "                       one per line\n"
         "  --display            show pictures on the glasses (watch "
         "default)\n"
         "  --windowed           show them in a desktop window instead\n"
@@ -82,13 +91,13 @@ static int parse_one_arg(options_t * p_opts, char ** argv, int remaining)
     static const char * const NAMES[] =
     {
         "--message", "--vault", "--captures", "--image", "--hash",
-        "--recipient", "--pin", "--maxdist",
+        "--recipient", "--pin", "--maxdist", "--messages",
     };
     const char ** targets[] =
     {
         &p_opts->p_message, &p_opts->p_vault, &p_opts->p_captures,
         &p_opts->p_image, &p_opts->p_hash, &p_opts->p_recipient,
-        &p_opts->p_pin, &p_opts->p_maxdist,
+        &p_opts->p_pin, &p_opts->p_maxdist, &p_opts->p_messages,
     };
     size_t count    = sizeof(NAMES) / sizeof(NAMES[0]);
     size_t i        = 0;
@@ -141,6 +150,11 @@ static int parse_args(int argc, char ** argv, options_t * p_opts)
         result = ARGS_HELP;
         goto cleanup;
     }
+    if ((0 == strcmp(p_opts->p_cmd, "forget")) && (argc > FIRST_OPTION_ARG))
+    {
+        p_opts->p_forget = argv[FIRST_OPTION_ARG];
+        arg++;
+    }
     while (arg < argc)
     {
         int consumed = 0;
@@ -188,7 +202,9 @@ static int validate_options(const options_t * p_opts)
     is_known = (0 == strcmp(p_opts->p_cmd, "identity")) ||
                (0 == strcmp(p_opts->p_cmd, "seal")) ||
                (0 == strcmp(p_opts->p_cmd, "reveal")) ||
-               (0 == strcmp(p_opts->p_cmd, "watch"));
+               (0 == strcmp(p_opts->p_cmd, "watch")) ||
+               (0 == strcmp(p_opts->p_cmd, "list")) ||
+               (0 == strcmp(p_opts->p_cmd, "forget"));
     if (0 == is_known)
     {
         (void)fprintf(stderr, "Unknown command '%s'\n", p_opts->p_cmd);
@@ -307,35 +323,67 @@ static void print_identity(const session_t * p_s)
 
 static int handle_frame(session_t * p_s, byte_span_t jpeg)
 {
-    int           result = -1;
-    phash_set_t * p_set  = NULL;
+    int result = 0;
 
-    p_set = (phash_set_t *)calloc(1U, sizeof(*p_set));
-    if ((NULL == p_set) || (0 != phash_set_from_jpeg(jpeg, p_set)))
-    {
-        goto cleanup;
-    }
     p_s->frames_seen++;
     if (0 != strcmp(p_s->opts.p_cmd, "seal"))
     {
-        result = (ACTION_ERROR == actions_reveal(p_s, jpeg, p_set)) ? -1
-                                                                     : 0;
+        result = (ACTION_ERROR == actions_reveal_frame(p_s, jpeg)) ? -1 : 0;
     }
     else if ((0 != p_s->offline) || (p_s->frames_seen > SEAL_WARMUP_FRAMES))
     {
-        result = actions_seal(p_s, jpeg, p_set);
+        result = actions_seal_frame(p_s, jpeg);
         g_stop = 1;
     }
-    else
+
+    return result;
+}
+
+static int run_vault_cmd(session_t * p_s)
+{
+    int           result = -1;
+    int           total  = 0;
+    int           i      = 0;
+    int           index  = 0;
+    vault_entry_t entries[VAULT_LIST_CAP];
+
+    if (0 == strcmp(p_s->opts.p_cmd, "list"))
     {
+        total = vault_list(p_s->opts.p_vault, entries, VAULT_LIST_CAP);
+        if (total < 0)
+        {
+            (void)fprintf(stderr, "[sealed] vault '%s' is corrupt\n",
+                          p_s->opts.p_vault);
+            goto cleanup;
+        }
+        (void)printf("%s: %d record%s\n", p_s->opts.p_vault, total,
+                     (1 == total) ? "" : "s");
+        for (i = 0; (i < total) && (i < VAULT_LIST_CAP); i++)
+        {
+            (void)printf("  [%d] %d view%s, %zu-byte sealed message\n",
+                         entries[i].index, entries[i].views,
+                         (1 == entries[i].views) ? "" : "s",
+                         entries[i].blob_bytes);
+        }
         result = 0;
+        goto cleanup;
     }
+    if ((NULL == p_s->opts.p_forget) ||
+        (0 != xr_args_parse_int(p_s->opts.p_forget, &index)))
+    {
+        (void)fprintf(stderr, "forget needs a record number from list\n");
+        goto cleanup;
+    }
+    if (0 != vault_forget(p_s->opts.p_vault, index))
+    {
+        (void)fprintf(stderr, "[sealed] no record %d in '%s'\n", index,
+                      p_s->opts.p_vault);
+        goto cleanup;
+    }
+    (void)printf("[sealed] forgot record %d\n", index);
+    result = 0;
 
 cleanup:
-    if (NULL != p_set)
-    {
-        free(p_set);
-    }
 
     return result;
 }
@@ -470,6 +518,7 @@ static int run_live(session_t * p_s, int glasses_pid)
     {
         goto cleanup;
     }
+    p_s->p_camera = p_cam;
     open_display(p_s);
     (void)signal(SIGINT, on_sigint);
     (void)printf("[sealed] %s: point the camera at the picture. Ctrl+C "
@@ -497,6 +546,7 @@ static int run_live(session_t * p_s, int glasses_pid)
     }
 
 cleanup:
+    p_s->p_camera = NULL;
     camera_close(p_cam);
     if (NULL != frame.p_data)
     {
@@ -527,6 +577,12 @@ int main(int argc, char ** argv)
     }
     if (0 != validate_options(&p_s->opts))
     {
+        goto cleanup;
+    }
+    if ((0 == strcmp(p_s->opts.p_cmd, "list")) ||
+        (0 == strcmp(p_s->opts.p_cmd, "forget")))
+    {
+        exit_code = (0 == run_vault_cmd(p_s)) ? EXIT_SUCCESS : EXIT_FAILURE;
         goto cleanup;
     }
     if (0 != acquire_identity(p_s, &glasses_pid))

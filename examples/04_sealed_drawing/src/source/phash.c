@@ -281,6 +281,23 @@ cleanup:
 }
 
 
+int phash_set_hash_region(const gray_image_t * p_img,
+                          const region_t * p_region, phash_set_t * p_set)
+{
+    int result = -1;
+
+    if ((NULL == p_img) || (NULL == p_region) || (NULL == p_set))
+    {
+        goto cleanup;
+    }
+    memset(p_set, 0, sizeof(*p_set));
+    result = hash_variants(p_img, p_region, p_set);
+
+cleanup:
+
+    return result;
+}
+
 int phash_set_from_jpeg(byte_span_t jpeg, phash_set_t * p_set)
 {
     int          result = -1;

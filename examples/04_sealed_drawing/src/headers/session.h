@@ -8,6 +8,7 @@ Summary: Everything one run of the program carries around: parsed
 #ifndef SESSION_H
 #define SESSION_H
 
+#include "camera.h"
 #include "display.h"
 #include "glasses_link.h"
 #include "keyring.h"
@@ -37,6 +38,8 @@ typedef struct
     const char * p_recipient;
     const char * p_pin;
     const char * p_maxdist;
+    const char * p_messages;
+    const char * p_forget;
     int          max_dist;
     int          want_display;
     int          windowed;
@@ -62,6 +65,7 @@ typedef struct
     long               hold_until_ms;
     glasses_link_t *   p_link;
     display_ctx_t *    p_display;
+    camera_ctx_t *     p_camera;
     const scan_t *     p_scan;
 } session_t;
 

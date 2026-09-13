@@ -18,6 +18,11 @@ the room, so it stays put on the wall as the head turns.
 
 ▶ **[Watch the full video](https://github.com/brianhasquestions/Viture_AR_Playground/raw/main/docs/demo-social.mp4)** (with audio, full length).
 
+`04_sealed_drawing`: a painted object is scanned through the glasses'
+camera and the message sealed to it is decoded on the display.
+
+![Scan and decode on the glasses](docs/sealed_drawing_scan.gif)
+
 ## Examples
 
 | Example | What it shows |
@@ -25,7 +30,7 @@ the room, so it stays put on the wall as the head turns.
 | [`01_camera_feed`](examples/01_camera_feed/) | Pull the live 1080p MJPEG camera feed; save stills or stream to a viewer |
 | [`02_ar_overlay`](examples/02_ar_overlay/) | Optical see-through AR: world-locked graphics on the glasses display, anchored by the Carina 6DoF pose |
 | [`03_virtual_screen`](examples/03_virtual_screen/) | Pin your desktop to a spot in the room: live screen capture on a world-locked quad |
-| [`04_sealed_drawing`](examples/04_sealed_drawing/) | Hold the volume rocker to seal a message to a painted object and one specific pair of glasses, or to decode it: X25519 identity from the hardware serial hash, HKDF, two AES-256-GCM layers (libcrypto), object located and traced on the display. [Example pictures](docs/sealed_drawing_decoded.jpg) |
+| [`04_sealed_drawing`](examples/04_sealed_drawing/) | Hold the volume rocker to seal a message to a painted object and one specific pair of glasses, or to decode it: X25519 identity from the hardware serial hash, HKDF, two AES-256-GCM layers (libcrypto); ORB-style keypoint matching in pure C; the object is traced on the display |
 
 ## Layout
 

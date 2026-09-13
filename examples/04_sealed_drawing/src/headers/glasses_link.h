@@ -61,6 +61,16 @@ Outputs: GLASSES_LINK_UP or GLASSES_LINK_DOWN once per hold,
 int glasses_link_take_trigger(glasses_link_t * p_link);
 
 /*
+Summary: Check whether a short press (one or two reports, then quiet)
+         finished since the last call. Used to move through the
+         on-glasses message picker.
+Inputs:  p_link - open link.
+Outputs: GLASSES_LINK_UP or GLASSES_LINK_DOWN once per press,
+         GLASSES_LINK_NONE otherwise.
+*/
+int glasses_link_take_press(glasses_link_t * p_link);
+
+/*
 Summary: Undo whatever a hold toggled (display mode, lens film) and
          park the volume at the mid level again. Call from the main loop
          after a trigger, never from a callback.

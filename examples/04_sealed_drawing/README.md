@@ -1,5 +1,7 @@
 # 04_sealed_drawing
 
+![Scan and decode on the glasses](../../docs/sealed_drawing_scan.gif)
+
 Draw something, type a message, and seal that message to the drawing
 **and to one specific pair of glasses**. Hand the glasses over; whoever
 wears them looks at the drawing through the onboard camera and the
@@ -45,12 +47,15 @@ reveal (recipient, needs the glasses plugged in):
   all fail the tag check cleanly (`[locked]`), never a garbled
   plaintext.
 - **The object selects, the glasses open.** The painted object is located
-  by edge density (busy paint, not smooth skin or walls), a square around
-  it is hashed with a 64-bit DCT perceptual hash at several tilts and
-  zooms, and its hue/saturation histogram is taken. A record matches
-  when (shape distance + colour dissimilarity %) / 3 is within
-  `--maxdist`: the same object from another angle scores about 15-20,
-  an unrelated scene 27 and up. Only the right glasses can open it.
+  by colourful edge density (busy paint, not smooth skin or walls), and
+  the area around it is fingerprinted with ORB-style local features:
+  FAST corners on a small image pyramid, each with an orientation and a
+  256-bit rotated BRIEF descriptor. A live view matches a stored one
+  when at least 10 descriptor pairs agree on a single similarity
+  transform (RANSAC). That survives tilt, rotation, distance and partial
+  views; room shots score 6 or fewer. For texture-poor drawings that
+  yield too few corners, a perceptual hash plus colour histogram score
+  is the fallback (`--maxdist`). Only the right glasses can open it.
 
 ## Layout
 
@@ -64,9 +69,11 @@ reveal (recipient, needs the glasses plugged in):
 | `camera` | Newest MJPEG frame from the glasses' camera (detaches uvcvideo, retries start) |
 | `picture` | Keep captures: colour decode, caption band, BMP writer; quarter-res live preview |
 | `scan` | Sobel outline of the scan area, traced by a sweeping line on the glasses |
-| `actions` | Seal / reveal / watch-capture flows |
+| `actions` | Encode (multi-shot, message picker) / decode / one-shot flows |
 | `locate` | Find the painted object: densest edge cluster in the view |
-| `phash` | Object fingerprint: DCT hash of the located square at several tilts and zooms |
+| `keypoints` | ORB-style local features: FAST corners, rotated BRIEF, RANSAC verification |
+| `fingerprint` | One view's keypoints plus hash and colour; comparison and serialisation |
+| `phash` | Fallback fingerprint: DCT hash of the located square at several tilts and zooms |
 | `colorsig` | Hue/saturation histogram of the located square |
 | `display`, `hud` | Put the revealed text on the glasses via SDL2 |
 | `hexcodec`, `fileio`, `bytes` | Small helpers |
@@ -92,10 +99,15 @@ search area. Put the painted object inside the brackets, a comfortable
 arm's length away, and:
 
 - **hold volume DOWN** for about a second and a half to **encode**: the
-  frame is captured, the scan plays (the object's outline is traced by a
-  sweeping line, then blinks LOCKED ON), and the message (`--message`, or
-  typed at the terminal prompt) is sealed to that object and to these
-  glasses. The result shows SEALED - NEW MESSAGE STORED over the picture.
+  frame is captured and the scan plays (the object's outline is traced
+  by a sweeping line, then blinks LOCKED ON). Then keep the object in
+  view and **turn it slowly**: three more views are taken over about two
+  seconds, so the record holds four angles of it. Finally pick the
+  message: `--message` if given, otherwise an on-glasses picker (tap
+  volume up/down to move through the presets from `--messages <file>`
+  or the built-in list, hold either way to confirm). The message is
+  sealed to that object and to these glasses, and the result shows
+  SEALED - NEW MESSAGE STORED over the picture.
 - **hold volume UP** to **decode**: the object is looked up. A match
   shows DECODED - MESSAGE REVEALED with the message; a record sealed to
   other glasses shows LOCKED - NOT YOUR GLASSES; no record shows NOT
@@ -119,6 +131,8 @@ The one-shot commands still exist:
 make run ARGS="identity"                                 # keys
 make run ARGS='seal --message "meet at the docks, 9pm"'  # one frame
 make run ARGS="reveal --display"                         # until Ctrl+C
+make run ARGS="list"                                     # vault contents
+make run ARGS="forget 2"                                 # drop record 2
 ```
 
 Every capture is kept under `captures/` in the directory you run from:
@@ -139,7 +153,10 @@ Options:
   both seal and reveal; without it the record shows as locked.
 - `--recipient <hex64>` seals for another pair's public key (from their
   `identity` output) while your own glasses supply the camera.
-- `--maxdist <n>` match threshold on the combined score, default 22.
+- `--messages <file>` preset messages for the on-glasses picker, one per
+  line (five built-in ones are used if absent).
+- `--maxdist <n>` hash-score threshold for texture-poor objects, default
+  22. Textured objects are decided by keypoints and ignore it.
 - `--captures <dir>` where pictures go (default `captures/`).
 - `--windowed` shows the pictures in a desktop window instead of on the
   glasses; `--no-preview` stops `watch` from streaming the live view.
@@ -148,7 +165,10 @@ Options:
 and exits. `reveal` and `watch` run until Ctrl+C or Esc.
 
 `watch --image f.jpg --hash <hex64> --windowed` runs one capture offline,
-animation and all, in a desktop window.
+animation and all, in a desktop window. `test/offline_test.sh` runs the
+encode, decode, locked, not-found, list and forget paths on the sample
+frames in `test/data/` and fails on any unexpected outcome; run it after
+touching the matcher or the crypto.
 
 ## Test it without the headset
 
@@ -167,14 +187,13 @@ H=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 - Possession is the credential. Anyone who can plug the glasses in can
   rebuild the identity, which is the point of binding to hardware; add
   `--pin` if you want a second factor that travels separately.
-- Matching is tolerant of position and distance, and colour similarity
-  covers a fair amount of tilt and pose change, but it is not
-  bulletproof: in live tests with a hand-held painted doll, roughly two
-  out of three decodes matched, and misses came from a very different
-  tilt, dim light, or the object filling the whole view. Keep the object
-  inside the brackets at arm's length, in decent light, in front of a
-  plain wall; a busy or brightly coloured background (a monitor showing
-  code, say) can draw the locator away from the object.
+- Keypoint matching needs texture: a painted or printed object works
+  well, a plain silhouette drawing falls back to the hash score. Keep
+  the object inside the brackets at arm's length in decent light; a busy
+  or brightly coloured background (a monitor showing code, say) can draw
+  the locator away from the object.
+- The capture is taken the moment the hold completes, so aim first, then
+  hold.
 - Baseline JPEG only (what the camera emits). The vault file is local;
   nothing leaves the machine.
 
